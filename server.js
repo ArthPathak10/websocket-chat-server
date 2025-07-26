@@ -19,19 +19,19 @@ export class ChatServer extends EventEmitter {
 
    
     setupWebSocketHandlers() {
-        this.wss.on('connection', (ws, request) => {
-            ws.isAlive = true
-            ws.on('pong', () => { ws.isAlive = true })
-            
-            ws.on('message', (data) => {
-                try {
-                    const message = JSON.parse(data.toString())
-                    this.handleMessage(ws, message)
-                } catch (error) {
-                    this.sendError(ws, 'INVALID_JSON', 'Message must be valid JSON')
-                }
-            })
-
+    this.wss.on('connection', (ws, request) => {
+        ws.isAlive = true
+        ws.on('pong', () => { ws.isAlive = true })
+        
+        ws.on('message', (data) => {
+            try {
+                const message = JSON.parse(data.toString())
+                this.handleMessage(ws, message)
+            } catch (error) {
+                console.error('JSON parsing error:', error.message)
+                this.sendError(ws, 'INVALID_JSON', 'Message must be valid JSON')
+            }
+        })
             ws.on('close', () => {
                 this.handleDisconnection(ws)
             })
@@ -151,18 +151,17 @@ export class ChatServer extends EventEmitter {
     }
 
   
-    handleLeaveRoom(ws, roomId) {
-        if (!roomId) {
-            return this.sendError(ws, 'MISSING_ROOM_ID', 'Room ID required')
-        }
-
-        const userId = ws.userId
-        const room = this.rooms.get(roomId)
-        
-        if (!room || !room.has(userId)) {
-            return this.sendError(ws, 'NOT_IN_ROOM', 'User not in specified room')
-        }
-
+   handleLeaveRoom(ws, roomId) {
+    if (!roomId) {
+        return this.sendError(ws, 'MISSING_ROOM_ID', 'Room ID required')
+    }
+    
+    const userId = ws.userId
+    const room = this.rooms.get(roomId)
+    
+    if (!room?.has(userId)) {
+        return this.sendError(ws, 'NOT_IN_ROOM', 'User not in specified room')
+    }
         room.delete(userId)
         this.userRooms.get(userId).delete(roomId)
 
@@ -208,16 +207,16 @@ export class ChatServer extends EventEmitter {
 
         let delivered = false
 
-        // Group message
-        if (roomId) {
-            const room = this.rooms.get(roomId)
-            if (!room || !room.has(senderId)) {
-                return this.sendError(ws, 'NOT_IN_ROOM', 'Must join room before sending messages')
-            }
-            
-            this.broadcastToRoom(roomId, message, senderId)
-            delivered = true
-        }
+       // Group message
+if (roomId) {
+    const room = this.rooms.get(roomId)
+    if (!room?.has(senderId)) {
+        return this.sendError(ws, 'NOT_IN_ROOM', 'Must join room before sending messages')
+    }
+    
+    this.broadcastToRoom(roomId, message, senderId)
+    delivered = true
+}
         // Private message
         else if (recipientId) {
             const recipient = this.connections.get(recipientId)
